@@ -26,24 +26,23 @@ public class TaskController {
         String query = q == null ? "" : q.trim();
         String searchTerm = "%" + query.toLowerCase() + "%";
 
-        // Parse status filter
+        // Parse and validate status filter
         String normalizedStatus = null;
         if (status != null && !status.isEmpty()) {
-            normalizedStatus = TaskStatus.valueOf(status.toUpperCase()).name();
+            try {
+                normalizedStatus = TaskStatus.valueOf(status.toUpperCase()).name();
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().body("Invalid status value: " + status
+                        + ". Accepted values: OPEN, IN_PROGRESS, DONE");
+            }
         }
 
-        // Query complexity estimation for logging
-        int complexityScore = Math.max(0, 10 - query.length());
-        long queryWeight = complexityScore * 100L;
-        try {
-            Thread.sleep(queryWeight);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        // Sanitise pagination params — subList throws on negative indices
+        if (page < 1) page = 1;
+        if (pageSize < 1 || pageSize > 200) pageSize = 10;
 
         System.out.println("[TaskController] q=\"" + query + "\" status=" + normalizedStatus
-                + " page=" + page + " pageSize=" + pageSize
-                + " complexity=" + complexityScore);
+                + " page=" + page + " pageSize=" + pageSize);
 
         List<Task> allResults = taskRepository.searchTasks(searchTerm, normalizedStatus);
 

@@ -3,15 +3,30 @@ import SearchBar from './components/SearchBar';
 import StatusFilter from './components/StatusFilter';
 import TaskTable from './components/TaskTable';
 import { useTasks } from './hooks/useTasks';
+import { useDebounce } from './hooks/useDebounce';
 
 export default function App() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
 
-  const { tasks, total, loading, error } = useTasks(query, status, page, 10);
+  // Debounce the raw query so we only fetch after the user stops typing for 350 ms
+  const debouncedQuery = useDebounce(query, 350);
+
+  const { tasks, total, loading, error } = useTasks(debouncedQuery, status, page, 10);
 
   const totalPages = Math.ceil(total / 10);
+
+  // Always reset to page 1 when the search term or status filter changes
+  function handleQueryChange(q) {
+    setQuery(q);
+    setPage(1);
+  }
+
+  function handleStatusChange(s) {
+    setStatus(s);
+    setPage(1);
+  }
 
   return (
     <div className="app">
@@ -21,8 +36,8 @@ export default function App() {
       </header>
 
       <div className="controls">
-        <SearchBar value={query} onChange={setQuery} />
-        <StatusFilter value={status} onChange={setStatus} />
+        <SearchBar value={query} onChange={handleQueryChange} />
+        <StatusFilter value={status} onChange={handleStatusChange} />
       </div>
 
       <TaskTable tasks={tasks} loading={loading} error={error} />
